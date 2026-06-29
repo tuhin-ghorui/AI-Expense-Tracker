@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
 import {
   Sparkles,
   LogOut,
   PlusCircle,
   Trash2,
-  DollarSign,
   PieChart,
   Calendar,
   TrendingUp,
   BrainCircuit,
   Award,
-  Wallet
+  Wallet,
+  IndianRupee,
+  Bot
 } from 'lucide-react';
 
 interface Expense {
@@ -24,12 +26,12 @@ interface Expense {
 }
 
 const CATEGORIES = [
-  'Rent & Housing',
-  'Groceries & Food',
+  'Rent & Housing / PG',
+  'Groceries & Mess Food',
   'Books & Study Materials',
-  'Social & Fun',
-  'Transport',
-  'Utilities',
+  'Social, Fun & Dining',
+  'Transport (Metro/Auto)',
+  'Utilities & Bills',
   'Personal & Misc'
 ];
 
@@ -37,7 +39,7 @@ export const Dashboard: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loadingExpenses, setLoadingExpenses] = useState(true);
-  const [monthlyBudget, setMonthlyBudget] = useState<number>(500);
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(15000);
 
   // Form states
   const [amount, setAmount] = useState('');
@@ -120,7 +122,7 @@ export const Dashboard: React.FC = () => {
 
   const handleFetchAiAdvice = async () => {
     if (expenses.length === 0) {
-      alert('Please add some expenses first so Gemini AI can analyze your spending patterns!');
+      alert('Please log at least one expense so your AI Financial Coach can analyze your spending!');
       return;
     }
     setAiLoading(true);
@@ -140,11 +142,11 @@ export const Dashboard: React.FC = () => {
       if (data.success) {
         setAiAnalysis(data.analysis);
       } else {
-        alert('Failed to generate AI advice: ' + data.error);
+        alert('Notice: ' + data.error);
       }
     } catch (err) {
       console.error('AI Coach error:', err);
-      alert('Could not connect to AI Coach backend. Make sure http://localhost:5000 is running!');
+      alert('Could not connect to AI Coach backend. Please make sure http://localhost:5000 is running!');
     } finally {
       setAiLoading(false);
     }
@@ -176,7 +178,7 @@ export const Dashboard: React.FC = () => {
               <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
                 Student Finance Coach
               </h1>
-              <p className="text-xs text-slate-400">Powered by Google Gemini Pro</p>
+              <p className="text-xs text-slate-400">Powered by Google Gemini Pro AI</p>
             </div>
           </div>
 
@@ -184,11 +186,12 @@ export const Dashboard: React.FC = () => {
             <div className="hidden sm:flex items-center space-x-2 bg-slate-800/60 border border-slate-700/50 px-3 py-1.5 rounded-xl text-xs text-slate-300">
               <Wallet className="w-4 h-4 text-indigo-400" />
               <span>Budget Target:</span>
+              <span className="font-semibold text-indigo-300">₹</span>
               <input
                 type="number"
                 value={monthlyBudget}
                 onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                className="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-slate-100 text-center focus:outline-none focus:border-indigo-500"
+                className="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-slate-100 text-center font-semibold focus:outline-none focus:border-indigo-500"
               />
             </div>
 
@@ -210,17 +213,17 @@ export const Dashboard: React.FC = () => {
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Total Spent</p>
-              <h3 className="text-2xl font-bold text-slate-100 mt-1">${totalSpent.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-slate-100 mt-1">₹{totalSpent.toFixed(2)}</h3>
             </div>
             <div className="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400">
-              <DollarSign className="w-6 h-6" />
+              <IndianRupee className="w-6 h-6" />
             </div>
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Monthly Budget</p>
-              <h3 className="text-2xl font-bold text-slate-100 mt-1">${monthlyBudget.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-slate-100 mt-1">₹{monthlyBudget.toFixed(2)}</h3>
             </div>
             <div className="w-12 h-12 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center text-purple-400">
               <PieChart className="w-6 h-6" />
@@ -231,7 +234,7 @@ export const Dashboard: React.FC = () => {
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Remaining</p>
               <h3 className={`text-2xl font-bold mt-1 ${remainingBudget < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                ${remainingBudget.toFixed(2)}
+                ₹{remainingBudget.toFixed(2)}
               </h3>
             </div>
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
@@ -246,7 +249,7 @@ export const Dashboard: React.FC = () => {
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Daily Safe Limit</p>
-              <h3 className="text-2xl font-bold text-cyan-400 mt-1">${dailyLimit}/day</h3>
+              <h3 className="text-2xl font-bold text-cyan-400 mt-1">₹{dailyLimit}/day</h3>
             </div>
             <div className="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 rounded-xl flex items-center justify-center text-cyan-400">
               <Calendar className="w-6 h-6" />
@@ -254,7 +257,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 2-Column Grid: Left (Add & List), Right (AI Coach) */}
+        {/* 2-Column Grid: Left (Add & List), Right (AI Coach - ChatGPT / Claude Theme) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column (7 cols) */}
           <div className="lg:col-span-7 space-y-8">
@@ -267,16 +270,19 @@ export const Dashboard: React.FC = () => {
 
               <form onSubmit={handleAddExpense} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Amount ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="15.50"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
-                  />
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Amount (₹)</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-slate-500 font-medium">₹</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="150.00"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-4 py-2.5 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -300,7 +306,7 @@ export const Dashboard: React.FC = () => {
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="e.g. Textbooks or Campus Coffee"
+                    placeholder="e.g. Chai & Snacks or Stationery"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -375,7 +381,7 @@ export const Dashboard: React.FC = () => {
 
                       <div className="flex items-center space-x-4">
                         <span className="text-base font-semibold text-slate-100">
-                          -${Number(item.amount).toFixed(2)}
+                          -₹{Number(item.amount).toFixed(2)}
                         </span>
                         <button
                           onClick={() => handleDeleteExpense(item.id)}
@@ -392,52 +398,89 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column (5 cols): Gemini AI Financial Coach */}
+          {/* Right Column (5 cols): AI Coach (ChatGPT / Claude AI Theme) */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950/40 to-purple-950/40 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl space-y-6 relative overflow-hidden">
-              <div className="flex items-center justify-between">
+            <div className="bg-slate-900/80 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl space-y-6 relative overflow-hidden backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                    <BrainCircuit className="w-6 h-6 text-white" />
+                  <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/30">
+                    <Bot className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-100">AI Financial Coach</h2>
-                    <p className="text-xs text-indigo-300">Google Gemini Pro Analysis</p>
+                    <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent">
+                      AI Financial Assistant
+                    </h2>
+                    <p className="text-xs text-indigo-400 flex items-center space-x-1 mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                      <span>Claude & ChatGPT Styled Intelligence</span>
+                    </p>
                   </div>
                 </div>
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed">
-                Get instant, personalized student budgeting strategies, spending habits breakdown, and tailored saving tricks tailored for your lifestyle.
+                Get instant, personalized student budgeting advice tailored for your daily expenses, PG rent, and lifestyle choices.
               </p>
 
               <button
                 onClick={handleFetchAiAdvice}
                 disabled={aiLoading}
-                className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:opacity-95 text-white font-semibold py-3 px-4 rounded-xl shadow-xl shadow-indigo-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-semibold py-3 px-4 rounded-xl shadow-xl shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
               >
                 {aiLoading ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="text-sm">Gemini AI is analyzing...</span>
+                    <span className="text-sm font-medium">Generating Insights...</span>
                   </div>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Generate AI Financial Insights</span>
+                    <span>Generate AI Insights</span>
                   </>
                 )}
               </button>
 
-              {/* AI Analysis Result */}
+              {/* ChatGPT / Claude Style Message Bubble Container */}
               {aiAnalysis && (
-                <div className="mt-6 bg-slate-950/80 border border-indigo-500/20 rounded-xl p-5 space-y-3 max-h-[500px] overflow-y-auto">
-                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-sm border-b border-slate-800 pb-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Coach Advice & Recommendations</span>
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-indigo-300 px-1">
+                    <BrainCircuit className="w-4 h-4 text-purple-400" />
+                    <span>AI Assistant Response</span>
                   </div>
-                  <div className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
-                    {aiAnalysis}
+
+                  <div className="bg-slate-950/90 border border-indigo-500/25 rounded-2xl p-5 shadow-2xl relative space-y-4">
+                    {/* Bot Avatar Badge inside Bubble */}
+                    <div className="flex items-center space-x-2 pb-3 border-b border-slate-800/80">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold">
+                        AI
+                      </div>
+                      <span className="text-xs font-medium text-slate-400">Financial Coach</span>
+                    </div>
+
+                    {/* Rich Rendered Markdown */}
+                    <div className="prose prose-invert prose-xs max-w-none text-slate-200 text-xs leading-relaxed space-y-3">
+                      <ReactMarkdown
+                        components={{
+                          h3: ({ node, ...props }) => (
+                            <h3 className="text-sm font-bold text-indigo-300 mt-3 mb-1.5 flex items-center space-x-1" {...props} />
+                          ),
+                          strong: ({ node, ...props }) => (
+                            <strong className="font-semibold text-purple-200 bg-purple-500/10 px-1 py-0.5 rounded" {...props} />
+                          ),
+                          ul: ({ node, ...props }) => (
+                            <ul className="list-disc pl-4 space-y-1.5 my-2 text-slate-300" {...props} />
+                          ),
+                          li: ({ node, ...props }) => (
+                            <li className="marker:text-indigo-400 leading-normal" {...props} />
+                          ),
+                          p: ({ node, ...props }) => (
+                            <p className="text-slate-300 my-1 leading-relaxed" {...props} />
+                          )
+                        }}
+                      >
+                        {aiAnalysis}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               )}

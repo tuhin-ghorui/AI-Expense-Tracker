@@ -205,18 +205,18 @@ app.post('/api/ai/coach', async (req, res) => {
     }, {});
 
     const prompt = `
-You are a friendly, punchy AI Financial Coach for a college student. Keep your advice short, sweet, encouraging, and highly personal (maximum 150 words total). Avoid long introductions or repetitive generic filler.
+You are a friendly, punchy AI Financial Coach for an Indian college student. Keep your advice short, sweet, encouraging, and highly personal (maximum 150 words total). Use Indian Rupees (₹) for all currency values and relate tips to Indian student life (e.g., PG/hostel, mess/canteen, metro/auto, stationery). Avoid long intros.
 
 Student Snapshot:
-- Monthly Budget: $${monthlyBudget || 500}
-- Total Spent: $${totalSpent.toFixed(2)}
+- Monthly Budget: ₹${monthlyBudget || 15000}
+- Total Spent: ₹${totalSpent.toFixed(2)}
 - Category Breakdown: ${JSON.stringify(categoryBreakdown)}
-- Recent Items Logged: ${JSON.stringify(expenses.slice(0, 5).map(e => `${e.description || e.category}: $${e.amount}`))}
+- Recent Items Logged: ${JSON.stringify(expenses.slice(0, 5).map(e => `${e.description || e.category}: ₹${e.amount}`))}
 
 Provide a crisp Markdown output with exactly these 3 concise sections:
-👋 **Personal Snapshot**: 1 short friendly sentence reacting directly to what they spent on.
-💡 **Quick Hacks (2 Punchy Bullet Points)**: Super specific student savings tips directly related to their top categories.
-🎯 **Daily Target**: 1 clear sentence giving their suggested daily spending cap to stay on budget.
+👋 **Personal Snapshot**: 1 short friendly sentence reacting directly to what they spent on in ₹.
+💡 **Quick Indian Student Hacks (2 Punchy Bullets)**: Super specific savings tips directly related to their top spent categories.
+🎯 **Daily Target**: 1 clear sentence giving their suggested daily spending cap in ₹ to stay on budget.
 `;
 
     // Try modern models in order of speed & recommendation with retries
