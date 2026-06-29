@@ -1,0 +1,267 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Initialize Supabase Client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing in .env');
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+
+// Initialize Google Gemini AI Client
+const geminiApiKey = process.env.GEMINI_API_KEY;
+if (!geminiApiKey) {
+  console.warn('⚠️ Warning: GEMINI_API_KEY missing in .env');
+}
+
+const genAI = new GoogleGenerativeAI(geminiApiKey || '');
+
+// Root welcome endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: '🚀 AI Student Expense Tracker API Server is Running!',
+    endpoints: {
+      health: '/api/health',
+      expenses: '/api/expenses/:userId',
+      goals: '/api/goals/:userId',
+      aiCoach: '/api/ai/coach (POST)'
+    }
+  });
+});
+
+// =========================================
+// HEALTH CHECK ENDPOINT
+// =========================================
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {
+      supabase: !!supabaseUrl,
+      gemini: !!geminiApiKey
+    }
+  });
+});
+
+// =========================================
+// EXPENSES API ENDPOINTS
+// =========================================
+
+// GET /api/expenses/:userId - Fetch expenses for a specific user
+app.get('/api/expenses/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching expenses:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/expenses - Add a new expense
+app.post('/api/expenses', async (req, res) => {
+  try {
+    const { user_id, amount, category, description, date } = req.body;
+
+    if (!user_id || !amount || !category) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: user_id, amount, and category are required.'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert([
+        {
+          user_id,
+          amount: parseFloat(amount),
+          category,
+          description: description || '',
+          date: date || new Date().toISOString().split('T')[0]
+        }
+      ])
+      .select();
+
+    if (error) throw error;
+    res.status(201).json({ success: true, data: data[0] });
+  } catch (error) {
+    console.error('Error adding expense:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/expenses/:id - Delete an expense
+app.delete('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Expense deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting expense:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =========================================
+// BUDGET GOALS API ENDPOINTS
+// =========================================
+
+// GET /api/goals/:userId - Fetch budget goals for a user
+app.get('/api/goals/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await supabase
+      .from('budget_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching budget goals:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/goals - Add a budget goal
+app.post('/api/goals', async (req, res) => {
+  try {
+    const { user_id, goal_name, target_amount, current_amount, deadline } = req.body;
+
+    if (!user_id || !goal_name || !target_amount) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: user_id, goal_name, and target_amount are required.'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('budget_goals')
+      .insert([
+        {
+          user_id,
+          goal_name,
+          target_amount: parseFloat(target_amount),
+          current_amount: current_amount ? parseFloat(current_amount) : 0.00,
+          deadline: deadline || null
+        }
+      ])
+      .select();
+
+    if (error) throw error;
+    res.status(201).json({ success: true, data: data[0] });
+  } catch (error) {
+    console.error('Error adding budget goal:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =========================================
+// AI FINANCIAL COACH ENDPOINT (GEMINI PRO)
+// =========================================
+app.post('/api/ai/coach', async (req, res) => {
+  try {
+    const { userId, expenses, monthlyBudget } = req.body;
+
+    if (!expenses || !Array.isArray(expenses)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide an array of expenses.'
+      });
+    }
+
+    // Calculate spending summary
+    const totalSpent = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const categoryBreakdown = expenses.reduce((acc, item) => {
+      acc[item.category] = (acc[item.category] || 0) + Number(item.amount || 0);
+      return acc;
+    }, {});
+
+    const prompt = `
+You are an empathetic, expert AI Financial Coach for college/university students.
+Analyze the following student financial data:
+- Monthly Budget Target: $${monthlyBudget || 'Not specified'}
+- Total Recent Spent: $${totalSpent.toFixed(2)}
+- Spending by Category: ${JSON.stringify(categoryBreakdown, null, 2)}
+- Detailed Recent Transactions: ${JSON.stringify(expenses.slice(0, 15), null, 2)}
+
+Please provide a structured, encouraging financial coaching analysis formatted in Markdown containing:
+1. 📊 **Quick Spending Analysis**: Summarize where their money is going (identify high spending categories like eating out, rent, textbooks, etc.).
+2. 💡 **Top 3 Actionable Student Savings Tips**: Tailored, practical strategies for a student to cut costs without sacrificing quality of life.
+3. 🎯 **Daily Spending Threshold Suggestion**: Provide a realistic recommended daily spending cap to stay under budget.
+`;
+
+    // Try gemini-1.5-flash or fallback to gemini-pro
+    let responseText = '';
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      responseText = response.text();
+    } catch (modelErr) {
+      console.warn('Fallback to gemini-pro due to model error:', modelErr.message);
+      const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const result = await fallbackModel.generateContent(prompt);
+      const response = await result.response;
+      responseText = response.text();
+    }
+
+    // Optionally save suggestion to Supabase if userId is present
+    if (userId) {
+      await supabase.from('ai_suggestions').insert([
+        {
+          user_id: userId,
+          suggestion_text: responseText,
+          category: 'General AI Coaching'
+        }
+      ]);
+    }
+
+    res.json({
+      success: true,
+      analysis: responseText,
+      summary: {
+        totalSpent,
+        categoryBreakdown
+      }
+    });
+  } catch (error) {
+    console.error('Error generating AI coaching:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate AI financial advice: ' + error.message
+    });
+  }
+});
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
