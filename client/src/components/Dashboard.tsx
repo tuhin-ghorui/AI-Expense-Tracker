@@ -191,7 +191,11 @@ export const Dashboard: React.FC = () => {
       }
     } catch (err) {
       console.error('AI Coach error:', err);
-      alert('Could not connect to AI Coach backend. Please make sure http://localhost:5000 is running!');
+      if (window.location.hostname !== 'localhost') {
+        alert('Could not connect to AI Coach backend. Please add your live backend URL (e.g. from Render) as VITE_API_URL in your Vercel Environment Variables and redeploy!');
+      } else {
+        alert('Could not connect to AI Coach backend. Please make sure http://localhost:5000 is running locally!');
+      }
     } finally {
       setAiLoading(false);
     }
