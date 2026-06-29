@@ -102,13 +102,16 @@ export const Dashboard: React.FC = () => {
   const fetchExpenses = async (userId: string) => {
     setLoadingExpenses(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/expenses/${userId}`);
-      const data = await res.json();
-      if (data.success) {
-        setExpenses(data.data || []);
-      }
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setExpenses(data || []);
     } catch (err) {
-      console.error('Failed to fetch expenses:', err);
+      console.error('Failed to fetch expenses from Supabase:', err);
     } finally {
       setLoadingExpenses(false);
     }
@@ -120,25 +123,28 @@ export const Dashboard: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/expenses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.id,
-          amount: parseFloat(amount),
-          category,
-          description,
-          date
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setExpenses([data.data, ...expenses]);
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert([
+          {
+            user_id: user.id,
+            amount: parseFloat(amount),
+            category,
+            description,
+            date
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setExpenses([data[0], ...expenses]);
         setAmount('');
         setDescription('');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add expense:', err);
+      alert('Error logging expense: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -146,14 +152,14 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteExpense = async (id: number) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (data.success) {
-        setExpenses(expenses.filter((e) => e.id !== id));
-      }
-    } catch (err) {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setExpenses(expenses.filter((e) => e.id !== id));
+    } catch (err: any) {
       console.error('Failed to delete expense:', err);
     }
   };
