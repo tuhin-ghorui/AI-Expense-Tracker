@@ -218,19 +218,47 @@ Please provide a structured, encouraging financial coaching analysis formatted i
 3. 🎯 **Daily Spending Threshold Suggestion**: Provide a realistic recommended daily spending cap to stay under budget.
 `;
 
-    // Try gemini-1.5-flash or fallback to gemini-pro
+    // Try modern models in order of speed & recommendation with retries
+    const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-pro'];
     let responseText = '';
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      responseText = response.text();
-    } catch (modelErr) {
-      console.warn('Fallback to gemini-pro due to model error:', modelErr.message);
-      const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-pro' });
-      const result = await fallbackModel.generateContent(prompt);
-      const response = await result.response;
-      responseText = response.text();
+    let lastError = null;
+
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    for (const modelName of candidateModels) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          responseText = response.text();
+          if (responseText) {
+            console.log(`Successfully generated AI insights using model: ${modelName}`);
+            break;
+          }
+        } catch (err) {
+          console.warn(`Model ${modelName} (attempt ${attempt}) failed: ${err.message}`);
+          lastError = err;
+          // If service unavailable or rate limited, wait a moment before retry/next model
+          if (err.message.includes('503') || err.message.includes('429')) {
+            await sleep(1200);
+          } else {
+            break; // Don't retry non-transient errors on the same model
+          }
+        }
+      }
+      if (responseText) break;
+    }
+
+    if (!responseText) {
+      let friendlyError = lastError?.message || 'Unknown generative error';
+      if (friendlyError.includes('503') || friendlyError.includes('429')) {
+        friendlyError = 'Google Gemini AI servers are currently experiencing high demand or rate limits. Please wait 10-20 seconds and click Generate AI Financial Insights again!';
+      }
+      return res.status(503).json({
+        success: false,
+        error: friendlyError
+      });
     }
 
     // Optionally save suggestion to Supabase if userId is present
