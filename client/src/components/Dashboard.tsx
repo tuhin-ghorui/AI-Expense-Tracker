@@ -36,6 +36,8 @@ const CATEGORIES = [
   'Investing (SIP/Stocks)'
 ];
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export const Dashboard: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -100,7 +102,7 @@ export const Dashboard: React.FC = () => {
   const fetchExpenses = async (userId: string) => {
     setLoadingExpenses(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/expenses/${userId}`);
+      const res = await fetch(`${API_BASE_URL}/api/expenses/${userId}`);
       const data = await res.json();
       if (data.success) {
         setExpenses(data.data || []);
@@ -118,7 +120,7 @@ export const Dashboard: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/expenses', {
+      const res = await fetch(`${API_BASE_URL}/api/expenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,7 +146,7 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteExpense = async (id: number) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/expenses/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -165,7 +167,7 @@ export const Dashboard: React.FC = () => {
     setAiAnalysis(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/ai/coach', {
+      const res = await fetch(`${API_BASE_URL}/api/ai/coach`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
