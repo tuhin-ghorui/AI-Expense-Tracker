@@ -5,9 +5,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   email TEXT UNIQUE,
   full_name TEXT,
-  monthly_budget DECIMAL(10, 2) DEFAULT 0.00,
-  currency TEXT DEFAULT 'USD',
+  monthly_budget DECIMAL(10, 2) DEFAULT 15000.00,
+  currency TEXT DEFAULT 'INR',
   student_year TEXT,
+  housing_type TEXT,
+  financial_goals TEXT,
+  is_onboarded BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL
 );
 
@@ -130,6 +133,11 @@ CREATE POLICY "profile: select"
   ON public.profiles
   FOR SELECT
   USING (auth.uid() = id);
+
+CREATE POLICY "profile: insert"
+  ON public.profiles
+  FOR INSERT
+  WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "profile: update"
   ON public.profiles

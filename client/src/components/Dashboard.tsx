@@ -32,7 +32,8 @@ const CATEGORIES = [
   'Social, Fun & Dining',
   'Transport (Metro/Auto)',
   'Utilities & Bills',
-  'Personal & Misc'
+  'Personal & Misc',
+  'Investing (SIP/Stocks)'
 ];
 
 export const Dashboard: React.FC = () => {
@@ -48,6 +49,8 @@ export const Dashboard: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [submitting, setSubmitting] = useState(false);
 
+  const [profile, setProfile] = useState<any>(null);
+
   // AI states
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -57,9 +60,42 @@ export const Dashboard: React.FC = () => {
       if (user) {
         setUser(user);
         fetchExpenses(user.id);
+        fetchProfile(user.id);
       }
     });
   }, []);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (data) {
+        setProfile(data);
+        if (data.monthly_budget) {
+          setMonthlyBudget(data.monthly_budget);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching profile in Dashboard:', err);
+    }
+  };
+
+  const updateBudgetInDb = async (newBudget: number) => {
+    setMonthlyBudget(newBudget);
+    if (user?.id) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ monthly_budget: newBudget })
+          .eq('id', user.id);
+      } catch (err) {
+        console.error('Failed to update monthly budget in Supabase:', err);
+      }
+    }
+  };
 
   const fetchExpenses = async (userId: string) => {
     setLoadingExpenses(true);
@@ -135,7 +171,8 @@ export const Dashboard: React.FC = () => {
         body: JSON.stringify({
           userId: user?.id,
           expenses,
-          monthlyBudget
+          monthlyBudget,
+          profile
         })
       });
       const data = await res.json();
@@ -183,6 +220,13 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            {profile && (
+              <div className="hidden md:flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs text-indigo-300">
+                <span className="font-semibold">{profile.full_name || 'Student'}</span>
+                {profile.housing_type && <span>• {profile.housing_type}</span>}
+              </div>
+            )}
+
             <div className="hidden sm:flex items-center space-x-2 bg-slate-800/60 border border-slate-700/50 px-3 py-1.5 rounded-xl text-xs text-slate-300">
               <Wallet className="w-4 h-4 text-indigo-400" />
               <span>Budget Target:</span>
@@ -190,7 +234,7 @@ export const Dashboard: React.FC = () => {
               <input
                 type="number"
                 value={monthlyBudget}
-                onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                onChange={(e) => updateBudgetInDb(Number(e.target.value))}
                 className="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-slate-100 text-center font-semibold focus:outline-none focus:border-indigo-500"
               />
             </div>
