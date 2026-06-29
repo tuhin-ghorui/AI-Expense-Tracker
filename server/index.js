@@ -205,17 +205,18 @@ app.post('/api/ai/coach', async (req, res) => {
     }, {});
 
     const prompt = `
-You are an empathetic, expert AI Financial Coach for college/university students.
-Analyze the following student financial data:
-- Monthly Budget Target: $${monthlyBudget || 'Not specified'}
-- Total Recent Spent: $${totalSpent.toFixed(2)}
-- Spending by Category: ${JSON.stringify(categoryBreakdown, null, 2)}
-- Detailed Recent Transactions: ${JSON.stringify(expenses.slice(0, 15), null, 2)}
+You are a friendly, punchy AI Financial Coach for a college student. Keep your advice short, sweet, encouraging, and highly personal (maximum 150 words total). Avoid long introductions or repetitive generic filler.
 
-Please provide a structured, encouraging financial coaching analysis formatted in Markdown containing:
-1. 📊 **Quick Spending Analysis**: Summarize where their money is going (identify high spending categories like eating out, rent, textbooks, etc.).
-2. 💡 **Top 3 Actionable Student Savings Tips**: Tailored, practical strategies for a student to cut costs without sacrificing quality of life.
-3. 🎯 **Daily Spending Threshold Suggestion**: Provide a realistic recommended daily spending cap to stay under budget.
+Student Snapshot:
+- Monthly Budget: $${monthlyBudget || 500}
+- Total Spent: $${totalSpent.toFixed(2)}
+- Category Breakdown: ${JSON.stringify(categoryBreakdown)}
+- Recent Items Logged: ${JSON.stringify(expenses.slice(0, 5).map(e => `${e.description || e.category}: $${e.amount}`))}
+
+Provide a crisp Markdown output with exactly these 3 concise sections:
+👋 **Personal Snapshot**: 1 short friendly sentence reacting directly to what they spent on.
+💡 **Quick Hacks (2 Punchy Bullet Points)**: Super specific student savings tips directly related to their top categories.
+🎯 **Daily Target**: 1 clear sentence giving their suggested daily spending cap to stay on budget.
 `;
 
     // Try modern models in order of speed & recommendation with retries
