@@ -38,7 +38,7 @@ An intelligent personal finance companion designed specifically for students. Th
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/AI-Expense-Tracker.git
+   git clone https://github.com/tuhin-ghorui/AI-Expense-Tracker.git
    cd AI-Expense-Tracker
    ```
 
